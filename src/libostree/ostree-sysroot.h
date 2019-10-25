@@ -200,6 +200,16 @@ gboolean ostree_sysroot_deploy_tree (OstreeSysroot     *self,
                                      GCancellable      *cancellable,
                                      GError           **error);
 
+typedef enum {
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NONE = 0,
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN = (1 << 0),
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NOT_DEFAULT = (1 << 1),
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NO_CLEAN = (1 << 2),
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN_PENDING = (1 << 3),
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN_ROLLBACK = (1 << 4),
+  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN_PREVIOUS_VERSION = (1 << 5),
+} OstreeSysrootSimpleWriteDeploymentFlags;
+
 _OSTREE_PUBLIC
 gboolean ostree_sysroot_stage_tree (OstreeSysroot     *self,
                                     const char        *osname,
@@ -210,6 +220,18 @@ gboolean ostree_sysroot_stage_tree (OstreeSysroot     *self,
                                     OstreeDeployment **out_new_deployment,
                                     GCancellable      *cancellable,
                                     GError           **error);
+
+_OSTREE_PUBLIC
+gboolean ostree_sysroot_stage_tree_with_flags (OstreeSysroot     *self,
+                                               const char        *osname,
+                                               const char        *revision,
+                                               GKeyFile          *origin,
+                                               OstreeDeployment  *merge_deployment,
+                                               char             **override_kernel_argv,
+                                               OstreeDeployment **out_new_deployment,
+                                               OstreeSysrootSimpleWriteDeploymentFlags flags,
+                                               GCancellable      *cancellable,
+                                               GError           **error);
 
 _OSTREE_PUBLIC
 gboolean ostree_sysroot_deployment_set_mutable (OstreeSysroot     *self,
@@ -245,15 +267,6 @@ OstreeDeployment *ostree_sysroot_get_merge_deployment (OstreeSysroot     *self,
 _OSTREE_PUBLIC
 GKeyFile *ostree_sysroot_origin_new_from_refspec (OstreeSysroot      *self,
                                                   const char         *refspec);
-
-typedef enum {
-  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NONE = 0,
-  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN = (1 << 0),
-  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NOT_DEFAULT = (1 << 1),
-  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NO_CLEAN = (1 << 2),
-  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN_PENDING = (1 << 3),
-  OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN_ROLLBACK = (1 << 4),
-} OstreeSysrootSimpleWriteDeploymentFlags;
 
 _OSTREE_PUBLIC
 gboolean ostree_sysroot_simple_write_deployment (OstreeSysroot      *sysroot,

@@ -174,7 +174,7 @@ ot_admin_builtin_deploy (int argc, char **argv, OstreeCommandInvocation *invocat
       if (opt_not_as_default)
         return glnx_throw (error, "--stage cannot currently be combined with --not-as-default");
       if (!ostree_sysroot_stage_tree (sysroot, opt_osname, revision, origin, merge_deployment,
-                                      kargs_strv, &new_deployment, cancellable, error))
+                                      kargs_strv, &new_deployment, 0, cancellable, error))
         return FALSE;
       g_assert (new_deployment);
     }

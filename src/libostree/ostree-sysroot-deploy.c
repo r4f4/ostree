@@ -2851,6 +2851,48 @@ ostree_sysroot_stage_tree (OstreeSysroot     *self,
                            GCancellable      *cancellable,
                            GError           **error)
 {
+  return ostree_sysroot_stage_tree_with_flags (self,
+                                               osname,
+                                               revision,
+                                               origin,
+                                               merge_deployment,
+                                               override_kernel_argv,
+                                               out_new_deployment,
+                                               OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NONE,
+                                               cancellable,
+                                               error);
+}
+
+/**
+ * ostree_sysroot_stage_tree_with_flags:
+ * @self: Sysroot
+ * @osname: (allow-none): osname to use for merge deployment
+ * @revision: Checksum to add
+ * @origin: (allow-none): Origin to use for upgrades
+ * @merge_deployment: (allow-none): Use this deployment for merge path
+ * @override_kernel_argv: (allow-none) (array zero-terminated=1) (element-type utf8): Use these as kernel arguments; if %NULL, inherit options from provided_merge_deployment
+ * @out_new_deployment: (out): The new deployment path
+ * @flags: flags to control how the deployment is written
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Like ostree_sysroot_deploy_tree(), but "finalization" only occurs at OS
+ * shutdown time.
+ *
+ * Since: 2019.7
+ */
+gboolean
+ostree_sysroot_stage_tree_with_flags (OstreeSysroot     *self,
+                                      const char        *osname,
+                                      const char        *revision,
+                                      GKeyFile          *origin,
+                                      OstreeDeployment  *merge_deployment,
+                                      char             **override_kernel_argv,
+                                      OstreeDeployment **out_new_deployment,
+                                      OstreeSysrootSimpleWriteDeploymentFlags flags,
+                                      GCancellable      *cancellable,
+                                      GError           **error)
+{
   if (!_ostree_sysroot_ensure_writable (self, error))
     return FALSE;
 
@@ -2920,6 +2962,11 @@ ostree_sysroot_stage_tree (OstreeSysroot     *self,
   if (override_kernel_argv)
     g_variant_builder_add (builder, "{sv}", "kargs",
                            g_variant_new_strv ((const char *const*)override_kernel_argv, -1));
+
+  /* Proxy across any flags */
+  if (flags)
+    g_variant_builder_add (builder, "{sv}", "write-deployment-flags",
+                           g_variant_new_uint32 ((guint32)flags));
 
   const char *parent = dirname (strdupa (_OSTREE_SYSROOT_RUNSTATE_STAGED));
   if (!glnx_shutil_mkdir_p_at (AT_FDCWD, parent, 0755, cancellable, error))
@@ -3042,14 +3089,15 @@ _ostree_sysroot_finalize_staged (OstreeSysroot *self,
   staged->staged = FALSE;
   g_ptr_array_remove_index (self->deployments, 0);
 
-  /* TODO: Proxy across flags too?
-   *
-   * But note that we always use NO_CLEAN to avoid adding more latency at
+  OstreeSysrootSimpleWriteDeploymentFlags flags = 0;
+  g_variant_lookup (self->staged_deployment_data, "write-deployment-flags", "u", &flags);
+  /*
+   * Note that we always use NO_CLEAN to avoid adding more latency at
    * shutdown, and also because e.g. rpm-ostree wants to own the cleanup
    * process.
    */
-  OstreeSysrootSimpleWriteDeploymentFlags flags =
-    OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NO_CLEAN;
+  flags |= OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_NO_CLEAN;
+
   if (!ostree_sysroot_simple_write_deployment (self, ostree_deployment_get_osname (staged),
                                                staged, merge_deployment, flags,
                                                cancellable, error))
