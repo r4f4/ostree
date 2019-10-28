@@ -35,6 +35,7 @@ static gboolean opt_retain;
 static gboolean opt_stage;
 static gboolean opt_retain_pending;
 static gboolean opt_retain_rollback;
+static gboolean opt_retain_previous;
 static gboolean opt_not_as_default;
 static gboolean opt_no_prune;
 static char **opt_kernel_argv;
@@ -52,6 +53,7 @@ static GOptionEntry options[] = {
   { "stage", 0, 0, G_OPTION_ARG_NONE, &opt_stage, "Complete deployment at OS shutdown", NULL },
   { "retain-pending", 0, 0, G_OPTION_ARG_NONE, &opt_retain_pending, "Do not delete pending deployments", NULL },
   { "retain-rollback", 0, 0, G_OPTION_ARG_NONE, &opt_retain_rollback, "Do not delete rollback deployments", NULL },
+  { "retain-previous-version", 0, 0, G_OPTION_ARG_NONE, &opt_retain_previous, "Do not delete previous deployment", NULL },
   { "not-as-default", 0, 0, G_OPTION_ARG_NONE, &opt_not_as_default, "Append rather than prepend new deployment", NULL },
   { "karg-proc-cmdline", 0, 0, G_OPTION_ARG_NONE, &opt_kernel_proc_cmdline, "Import current /proc/cmdline", NULL },
   { "karg", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_kernel_argv, "Set kernel argument, like root=/dev/sda1; this overrides any earlier argument with the same name", "NAME=VALUE" },
@@ -173,8 +175,11 @@ ot_admin_builtin_deploy (int argc, char **argv, OstreeCommandInvocation *invocat
         return glnx_throw (error, "--stage cannot currently be combined with --retain arguments");
       if (opt_not_as_default)
         return glnx_throw (error, "--stage cannot currently be combined with --not-as-default");
-      if (!ostree_sysroot_stage_tree (sysroot, opt_osname, revision, origin, merge_deployment,
-                                      kargs_strv, &new_deployment, 0, cancellable, error))
+      OstreeSysrootSimpleWriteDeploymentFlags flags = 0;
+      if (opt_retain_previous)
+          flags = OSTREE_SYSROOT_SIMPLE_WRITE_DEPLOYMENT_FLAGS_RETAIN_PREVIOUS_VERSION;
+      if (!ostree_sysroot_stage_tree_with_flags (sysroot, opt_osname, revision, origin, merge_deployment,
+                                                 kargs_strv, &new_deployment, flags, cancellable, error))
         return FALSE;
       g_assert (new_deployment);
     }
