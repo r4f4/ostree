@@ -113,5 +113,28 @@
   environment:
     commit: "{{ rpmostree_status['deployments'][0]['checksum'] }}"
 
+- name: Previous version is retained during staged
+  shell: |
+    set -xeuo pipefail
+    ostree --repo=/ostree/repo refs --create nonstaged-deploy "${commit}"
+    ostree admin deploy nonstaged-deploy
+    ostree admin deploy --stage --retain-previous-version staged-deploy
+    test -f /run/ostree/staged-deployment
+    ostree admin status > status.txt
+    grep -qFe '(staged)' status.txt
+  environment:
+    commit: "{{ rpmostree_status['deployments'][0]['checksum'] }}"
+- include_tasks: ../tasks/reboot.yml
+- name: Check that previous version was kept
+  shell: |
+    set -xeuo pipefail
+    rpm-ostree status
+    # Assert that the previous boot had a journal entry for it
+    journalctl -b "-1" -u ostree-finalize-staged.service | grep -q -e 'Transaction complete'
+    # And there should not be a staged deployment
+    test '!' -f /run/ostree/staged-deployment
+    ostree admin status > status.txt
+    test $(grep -Fce 'Version: ' status.txt) == 1
+
 - name: Cleanup refs
   shell: ostree refs --delete staged-deploy nonstaged-deploy 
