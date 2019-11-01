@@ -52,8 +52,11 @@ struct _OstreeDeployment
   GKeyFile *origin;
   OstreeDeploymentUnlockedState unlocked;
   gboolean staged;
+  gchar *version;
+  gboolean version_is_cached;
 };
 
 void _ostree_deployment_set_bootcsum (OstreeDeployment *self, const char *bootcsum);
+char *_ostree_deployment_get_version (OstreeDeployment *self, OstreeRepo *repo, GError **error);
 
 G_END_DECLS
